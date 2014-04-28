@@ -713,14 +713,15 @@ Phaser.Sound.prototype = {
         this.isPlaying = false;
         var prevMarker = this.currentMarker;
 
-        if (this.currentMarker !== '')
-        {
-            this.onMarkerComplete.dispatch(this.currentMarker, this);
-        }
+        
 
         this.currentMarker = '';
         if( !this.paused )
         {
+            if (prevMarker !== '')
+            {
+                this.onMarkerComplete.dispatch(prevMarker, this);
+            }
             this.onStop.dispatch(this, prevMarker);
         }
 
