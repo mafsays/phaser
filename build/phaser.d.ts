@@ -2631,6 +2631,7 @@ declare module Phaser {
                 height: number;
                 left: number;
                 lifespan: number;
+                lifespanVariance : number;
                 maxParticles: number;//
                 maxParticleScale: number;
                 maxParticleSpeed: Phaser.Point;
@@ -2658,7 +2659,7 @@ declare module Phaser {
                 setSize(width: number, height: number): void;
                 setXSpeed(min: number, max: number): void;
                 setYSpeed(min: number, max: number): void;
-                start(explode?: boolean, lifespan?: number, frequency?: number, quantity?: number): void;
+                start(explode?: boolean, lifespan?: number, frequency?: number, quantity?: number, lifespanVariance? : number ): void;
                 update(): void;
                 revive(): void;
 

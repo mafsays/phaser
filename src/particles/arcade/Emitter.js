@@ -134,6 +134,13 @@ Phaser.Particles.Arcade.Emitter = function (game, x, y, maxParticles) {
     * @default
     */
     this.lifespan = 2000;
+    
+    /**
+    * @property {number} lifespanVariance - adds some random variation of each particles lifespan - will vary by +/- this value * lifespan
+    * @default
+    */
+    
+    this.lifespanVariance = 0;
 
     /**
     * @property {Phaser.Point} bounce - How much each particle should bounce on each axis.  1 = full bounce, 0 = no bounce.
@@ -345,12 +352,13 @@ Phaser.Particles.Arcade.Emitter.prototype.revive = function () {
 * @param {number} [frequency=250] - Ignored if Explode is set to true. Frequency is how often to emit a particle in ms.
 * @param {number} [quantity=0] - How many particles to launch. 0 = "all of the particles".
 */
-Phaser.Particles.Arcade.Emitter.prototype.start = function (explode, lifespan, frequency, quantity) {
+Phaser.Particles.Arcade.Emitter.prototype.start = function (explode, lifespan, frequency, quantity, lifespanVariance ) {
 
     if (typeof explode === 'undefined') { explode = true; }
     if (typeof lifespan === 'undefined') { lifespan = 0; }
     if (typeof frequency === 'undefined') { frequency = 250; }
     if (typeof quantity === 'undefined') { quantity = 0; }
+    if (typeof lifespanVariance === 'undefined' ) { lifespanVariance = 0; }
 
     this.revive();
 
@@ -359,6 +367,7 @@ Phaser.Particles.Arcade.Emitter.prototype.start = function (explode, lifespan, f
 
     this._explode = explode;
     this.lifespan = lifespan;
+    this.lifespanVariance = lifespanVariance;
     this.frequency = frequency;
 
     if (explode)
@@ -405,7 +414,16 @@ Phaser.Particles.Arcade.Emitter.prototype.emitParticle = function () {
         particle.reset(this.emitX, this.emitY);
     }
 
-    particle.lifespan = this.lifespan;
+    
+    if( this.lifespanVariance !== 0 )
+    {
+        var variation = this.lifespanVariance * this.lifespan;
+        particle.lifespan = this.game.rnd.integerInRange( this.lifespan - variation, this.lifespan + variation );
+    }
+    else
+    {
+        particle.lifespan = this.lifespan;
+    }
 
     particle.body.bounce.setTo(this.bounce.x, this.bounce.y);
 
@@ -611,3 +629,4 @@ Object.defineProperty(Phaser.Particles.Arcade.Emitter.prototype, "bottom", {
     }
 
 });
+
