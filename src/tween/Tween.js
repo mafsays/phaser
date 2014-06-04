@@ -200,7 +200,7 @@ Phaser.Tween.prototype = {
     * @param {boolean} [autoStart=false] - Whether this tween will start automatically or not.
     * @param {number} [delay=0] - Delay before this tween will start, defaults to 0 (no delay). Value given is in ms.
     * @param {number} [repeat=0] - Should the tween automatically restart once complete? If you want it to run forever set as Number.MAX_VALUE. This ignores any chained tweens.
-    * @param {boolean} [yoyo=false] - A tween that yoyos will reverse itself when it completes.
+    * @param {boolean} [yoyo=false] - A tween that yoyos will reverse itself and play backwards automatically. A yoyo'd tween doesn't fire the Tween.onComplete event, so listen for Tween.onLoop instead.
     * @return {Phaser.Tween} This Tween object.
     */
     to: function (properties, duration, ease, autoStart, delay, repeat, yoyo) {
@@ -211,6 +211,11 @@ Phaser.Tween.prototype = {
         delay = delay || 0;
         repeat = repeat || 0;
         yoyo = yoyo || false;
+
+        if (yoyo && repeat === 0)
+        {
+            repeat = 1;
+        }
 
         var self;
 
@@ -252,6 +257,30 @@ Phaser.Tween.prototype = {
             return this;
         }
 
+    },
+
+    /**
+    * Configure a Reverse Tween
+    *
+    * @method Phaser.Tween#from
+    * @param {object} properties - Properties you want to tween from.
+    * @param {number} [duration=1000] - Duration of this tween in ms.
+    * @param {function} [ease=null] - Easing function. If not set it will default to Phaser.Easing.Linear.None.
+    * @param {boolean} [autoStart=false] - Whether this tween will start automatically or not.
+    * @param {number} [delay=0] - Delay before this tween will start, defaults to 0 (no delay). Value given is in ms.
+    * @param {number} [repeat=0] - Should the tween automatically restart once complete? If you want it to run forever set as Number.MAX_VALUE. This ignores any chained tweens.
+    * @param {boolean} [yoyo=false] - A tween that yoyos will reverse itself and play backwards automatically. A yoyo'd tween doesn't fire the Tween.onComplete event, so listen for Tween.onLoop instead.
+    * @return {Phaser.Tween} This Tween object.
+    */
+    from: function(properties, duration, ease, autoStart, delay, repeat, yoyo) {
+        var _cache = {};
+        for(var prop in properties) {
+            if (properties.hasOwnProperty(prop)) {
+                _cache[prop] = this._object[prop];
+                this._object[prop] = properties[prop];
+            }
+        }
+        this.to(_cache, duration, ease, autoStart, delay, repeat, yoyo);
     },
 
     /**
@@ -456,6 +485,7 @@ Phaser.Tween.prototype = {
     repeat: function (times) {
 
         this._repeat = times;
+
         return this;
 
     },
@@ -471,6 +501,12 @@ Phaser.Tween.prototype = {
     yoyo: function(yoyo) {
 
         this._yoyo = yoyo;
+
+        if (yoyo && this._repeat === 0)
+        {
+            this._repeat = 1;
+        }
+
         return this;
 
     },
@@ -706,10 +742,14 @@ Phaser.Tween.prototype = {
                         var tmp = this._valuesStartRepeat[property];
                         this._valuesStartRepeat[property] = this._valuesEnd[property];
                         this._valuesEnd[property] = tmp;
-                        this._reversed = !this._reversed;
                     }
 
                     this._valuesStart[property] = this._valuesStartRepeat[property];
+                }
+
+                if (this._yoyo)
+                {
+                    this._reversed = !this._reversed;
                 }
 
                 this._startTime = time + this._delayTime;
@@ -717,7 +757,6 @@ Phaser.Tween.prototype = {
                 this.onLoop.dispatch(this._object);
 
                 return true;
-
             }
             else
             {

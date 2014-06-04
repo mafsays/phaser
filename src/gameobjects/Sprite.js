@@ -165,10 +165,11 @@ Phaser.Sprite = function (game, x, y, key, frame) {
     * 5 = outOfBoundsFired (0 = no, 1 = yes)
     * 6 = exists (0 = no, 1 = yes)
     * 7 = fixed to camera (0 = no, 1 = yes)
+    * 8 = destroy phase? (0 = no, 1 = yes)
     * @property {Array} _cache
     * @private
     */
-    this._cache = [ 0, 0, 0, 0, 1, 0, 1, 0 ];
+    this._cache = [ 0, 0, 0, 0, 1, 0, 1, 0, 0 ];
 
     /**
     * @property {Phaser.Rectangle} _bounds - Internal cache var.
@@ -409,6 +410,9 @@ Phaser.Sprite.prototype.loadTexture = function (key, frame) {
 * Crop allows you to crop the texture used to display this Sprite.
 * Cropping takes place from the top-left of the Sprite and can be modified in real-time by providing an updated rectangle object.
 * Note that cropping a Sprite will reset its animation to the first frame. You cannot currently crop an animated Sprite.
+* The rectangle object given to this method can be either a Phaser.Rectangle or any object so long as it has public x, y, width and height properties.
+* Please note that the rectangle object given is not duplicated by this method, but rather the Image uses a reference to the rectangle.
+* Keep this in mind if assigning a rectangle in a for-loop, or when cleaning up for garbage collection.
 *
 * @method Phaser.Sprite#crop
 * @memberof Phaser.Sprite
@@ -516,9 +520,11 @@ Phaser.Sprite.prototype.kill = function() {
 */
 Phaser.Sprite.prototype.destroy = function(destroyChildren) {
 
-    if (this.game === null) { return; }
+    if (this.game === null || this._cache[8] === 1) { return; }
 
     if (typeof destroyChildren === 'undefined') { destroyChildren = true; }
+
+    this._cache[8] = 1;
 
     if (this.parent)
     {
@@ -576,6 +582,8 @@ Phaser.Sprite.prototype.destroy = function(destroyChildren) {
     this.filters = null;
     this.mask = null;
     this.game = null;
+
+    this._cache[8] = 0;
 
 };
 
@@ -878,6 +886,10 @@ Object.defineProperty(Phaser.Sprite.prototype, "inputEnabled", {
                 this.input = new Phaser.InputHandler(this);
                 this.input.start();
             }
+            else if (this.input && !this.input.enabled)
+            {
+                this.input.start();
+            }
         }
         else
         {
@@ -886,6 +898,7 @@ Object.defineProperty(Phaser.Sprite.prototype, "inputEnabled", {
                 this.input.stop();
             }
         }
+
     }
 
 });
@@ -1051,6 +1064,20 @@ Object.defineProperty(Phaser.Sprite.prototype, "y", {
         {
             this.body._reset = 1;
         }
+
+    }
+
+});
+
+/**
+* @name Phaser.Sprite#destroyPhase
+* @property {boolean} destroyPhase - True if this object is currently being destroyed.
+*/
+Object.defineProperty(Phaser.Sprite.prototype, "destroyPhase", {
+
+    get: function () {
+
+        return !!this._cache[8];
 
     }
 

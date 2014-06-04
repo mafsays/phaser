@@ -3,18 +3,20 @@
  */
 
  /**
- *
+ * 
  * @class Strip
  * @extends DisplayObjectContainer
  * @constructor
  * @param texture {Texture} The texture to use
- * @param width {Number} the width
+ * @param width {Number} the width 
  * @param height {Number} the height
- *
+ * 
  */
 PIXI.Strip = function(texture, width, height)
 {
-    PIXI.DisplayObjectContainer.call( this );
+    PIXI.Sprite.call( this, texture );
+    this.width =width;
+    this.height = height;
     this.texture = texture;
     this.blendMode = PIXI.blendModes.NORMAL;
 
@@ -56,11 +58,12 @@ PIXI.Strip = function(texture, width, height)
     this.colors = new Float32Array()
     this.indices = new Uint16Array()
     */
-
-    this.width = width;
-    this.height = height;
+    
+  //  this.width = width;
+   // this.height = height;
 
     // load the texture!
+
     if(texture.baseTexture.hasLoaded)
     {
         this.width   = this.texture.frame.width;
@@ -77,16 +80,18 @@ PIXI.Strip = function(texture, width, height)
 };
 
 // constructor
-PIXI.Strip.prototype = Object.create(PIXI.DisplayObjectContainer.prototype);
+PIXI.Strip.prototype = Object.create(PIXI.Sprite.prototype);
 PIXI.Strip.prototype.constructor = PIXI.Strip;
 
 /*
- * Sets the texture that the Strip will use
+ * Sets the texture that the Strip will use 
  *
  * @method setTexture
  * @param texture {Texture} the texture that will be used
  * @private
  */
+
+/*
 PIXI.Strip.prototype.setTexture = function(texture)
 {
     //TODO SET THE TEXTURES
@@ -98,6 +103,7 @@ PIXI.Strip.prototype.setTexture = function(texture)
     this.height  = texture.frame.height;
     this.updateFrame = true;
 };
+*/
 
 /**
  * When the texture is updated, this event will fire to update the scale and frame
@@ -106,6 +112,7 @@ PIXI.Strip.prototype.setTexture = function(texture)
  * @param event
  * @private
  */
+
 PIXI.Strip.prototype.onTextureUpdate = function()
 {
     this.updateFrame = true;

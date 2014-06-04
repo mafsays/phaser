@@ -29,7 +29,10 @@ Phaser.InputHandler = function (sprite) {
     this.enabled = false;
 
     /**
-    * @property {number} priorityID - The PriorityID controls which Sprite receives an Input event first if they should overlap.
+    * The priorityID is used to determine which game objects should get priority when input events occur. For example if you have
+    * several Sprites that overlap, by default the one at the top of the display list is given priority for input events. You can
+    * stop this from happening by controlling the priorityID value. The higher the value, the more important they are considered to the Input events.
+    * @property {number} priorityID
     * @default
     */
     this.priorityID = 0;
@@ -163,6 +166,18 @@ Phaser.InputHandler = function (sprite) {
     this.consumePointerEvent = false;
 
     /**
+    * @property {boolean} _dragPhase - Internal cache var.
+    * @private
+    */
+    this._dragPhase = false;
+
+    /**
+    * @property {boolean} _wasEnabled - Internal cache var.
+    * @private
+    */
+    this._wasEnabled = false;
+
+    /**
     * @property {Phaser.Point} _tempPoint - Internal cache var.
     * @private
     */
@@ -204,7 +219,7 @@ Phaser.InputHandler.prototype = {
     start: function (priority, useHandCursor) {
 
         priority = priority || 0;
-        if (typeof useHandCursor == 'undefined') { useHandCursor = false; }
+        if (typeof useHandCursor === 'undefined') { useHandCursor = false; }
 
         //  Turning on
         if (this.enabled === false)
@@ -235,6 +250,7 @@ Phaser.InputHandler.prototype = {
 
             this.snapOffset = new Phaser.Point();
             this.enabled = true;
+            this._wasEnabled = true;
 
             //  Create the signals the Input component will emit
             if (this.sprite.events && this.sprite.events.onInputOver === null)
@@ -248,7 +264,55 @@ Phaser.InputHandler.prototype = {
             }
         }
 
+        this.sprite.events.onAddedToGroup.add(this.addedToGroup, this);
+        this.sprite.events.onRemovedFromGroup.add(this.removedFromGroup, this);
+
         return this.sprite;
+
+    },
+
+    /**
+    * Handles when the parent Sprite is added to a new Group.
+    *
+    * @method Phaser.InputHandler#addedToGroup
+    * @private
+    */
+    addedToGroup: function () {
+
+        if (this._dragPhase)
+        {
+            return;
+        }
+
+        if (this._wasEnabled && !this.enabled)
+        {
+            this.start();
+        }
+
+    },
+
+    /**
+    * Handles when the parent Sprite is removed from a Group.
+    *
+    * @method Phaser.InputHandler#removedFromGroup
+    * @private
+    */
+    removedFromGroup: function () {
+
+        if (this._dragPhase)
+        {
+            return;
+        }
+
+        if (this.enabled)
+        {
+            this._wasEnabled = true;
+            this.stop();
+        }
+        else
+        {
+            this._wasEnabled = false;
+        }
 
     },
 
@@ -306,7 +370,7 @@ Phaser.InputHandler.prototype = {
     */
     destroy: function () {
 
-        if (this.enabled)
+        if (this.sprite)
         {
             if (this._setHandCursor)
             {
@@ -338,7 +402,7 @@ Phaser.InputHandler.prototype = {
     */
     validForInput: function (highestID, highestRenderID) {
 
-        if (this.sprite.scale.x === 0 || this.sprite.scale.y === 0)
+        if (this.sprite.scale.x === 0 || this.sprite.scale.y === 0 || this.priorityID < this.game.input.minPriorityID)
         {
             return false;
         }
@@ -553,7 +617,7 @@ Phaser.InputHandler.prototype = {
     */
     checkPointerDown: function (pointer) {
 
-        if (this.enabled === false || this.sprite.visible === false || this.sprite.parent.visible === false)
+        if (!this.enabled || !this.sprite || !this.sprite.parent || !this.sprite.visible || !this.sprite.parent.visible)
         {
             return false;
         }
@@ -583,7 +647,7 @@ Phaser.InputHandler.prototype = {
     */
     checkPointerOver: function (pointer) {
 
-        if (this.enabled === false || this.sprite.visible === false || this.sprite.parent.visible === false)
+        if (!this.enabled || !this.sprite || !this.sprite.parent || !this.sprite.visible || !this.sprite.parent.visible)
         {
             return false;
         }
@@ -665,7 +729,7 @@ Phaser.InputHandler.prototype = {
     */
     update: function (pointer) {
 
-        if (this.sprite === null)
+        if (this.sprite === null || this.sprite.parent === undefined)
         {
             //  Abort. We've been destroyed.
             return;
@@ -722,10 +786,13 @@ Phaser.InputHandler.prototype = {
             if (this.useHandCursor && this._pointerData[pointer.id].isDragged === false)
             {
                 this.game.canvas.style.cursor = "pointer";
-                this._setHandCursor = false;
+                this._setHandCursor = true;
             }
 
-            this.sprite.events.onInputOver.dispatch(this.sprite, pointer);
+            if (this.sprite && this.sprite.events)
+            {
+                this.sprite.events.onInputOver.dispatch(this.sprite, pointer);
+            }
         }
 
     },
@@ -785,7 +852,11 @@ Phaser.InputHandler.prototype = {
             this._pointerData[pointer.id].isDown = true;
             this._pointerData[pointer.id].isUp = false;
             this._pointerData[pointer.id].timeDown = this.game.time.now;
-            this.sprite.events.onInputDown.dispatch(this.sprite, pointer);
+    
+            if (this.sprite && this.sprite.events)
+            {
+                this.sprite.events.onInputDown.dispatch(this.sprite, pointer);
+            }
 
             //  Start drag
             if (this.draggable && this.isDragged === false)
@@ -830,12 +901,18 @@ Phaser.InputHandler.prototype = {
             if (this.checkPointerOver(pointer))
             {
                 //  Release the inputUp signal and provide optional parameter if pointer is still over the sprite or not
-                this.sprite.events.onInputUp.dispatch(this.sprite, pointer, true);
+                if (this.sprite && this.sprite.events)
+                {
+                    this.sprite.events.onInputUp.dispatch(this.sprite, pointer, true);
+                }
             }
             else
             {
                 //  Release the inputUp signal and provide optional parameter if pointer is still over the sprite or not
-                this.sprite.events.onInputUp.dispatch(this.sprite, pointer, false);
+                if (this.sprite && this.sprite.events)
+                {
+                    this.sprite.events.onInputUp.dispatch(this.sprite, pointer, false);
+                }
 
                 //  Pointer outside the sprite? Reset the cursor
                 if (this.useHandCursor)
@@ -846,7 +923,7 @@ Phaser.InputHandler.prototype = {
             }
 
             //  Stop drag
-            if (this.draggable && this.isDragged && this._draggedPointerID == pointer.id)
+            if (this.draggable && this.isDragged && this._draggedPointerID === pointer.id)
             {
                 this.stopDrag(pointer);
             }
@@ -1133,6 +1210,7 @@ Phaser.InputHandler.prototype = {
 
         if (this.bringToTop)
         {
+            this._dragPhase = true;
             this.sprite.bringToTop();
         }
 
@@ -1150,6 +1228,7 @@ Phaser.InputHandler.prototype = {
         this.isDragged = false;
         this._draggedPointerID = -1;
         this._pointerData[pointer.id].isDragged = false;
+        this._dragPhase = false;
 
         if (this.snapOnRelease)
         {

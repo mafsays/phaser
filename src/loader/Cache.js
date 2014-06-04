@@ -93,6 +93,23 @@ Phaser.Cache = function (game) {
     */
     this.onSoundUnlock = new Phaser.Signal();
 
+    /**
+    * @property {array} _cacheMap - Const to cache object look-up array.
+    */
+    this._cacheMap = [];
+
+    this._cacheMap[Phaser.Cache.CANVAS] = this._canvases;
+    this._cacheMap[Phaser.Cache.IMAGE] = this._images;
+    this._cacheMap[Phaser.Cache.TEXTURE] = this._textures;
+    this._cacheMap[Phaser.Cache.SOUND] = this._sounds;
+    this._cacheMap[Phaser.Cache.TEXT] = this._text;
+    this._cacheMap[Phaser.Cache.PHYSICS] = this._physics;
+    this._cacheMap[Phaser.Cache.TILEMAP] = this._tilemaps;
+    this._cacheMap[Phaser.Cache.BINARY] = this._binary;
+    this._cacheMap[Phaser.Cache.BITMAPDATA] = this._bitmapDatas;
+    this._cacheMap[Phaser.Cache.BITMAPFONT] = this._bitmapFont;
+    this._cacheMap[Phaser.Cache.JSON] = this._json;
+
 };
 
 /**
@@ -569,14 +586,15 @@ Phaser.Cache.prototype = {
     },
 
     /**
-    * Get a physics data object from the cache by its key. You can get either the entire data set or just a single object from it.
+    * Get a physics data object from the cache by its key. You can get either the entire data set, a single object or a single fixture of an object from it.
     *
     * @method Phaser.Cache#getPhysicsData
     * @param {string} key - Asset key of the physics data object to retrieve from the Cache.
     * @param {string} [object=null] - If specified it will return just the physics object that is part of the given key, if null it will return them all.
+    * @param {string} fixtureKey - Fixture key of fixture inside an object. This key can be set per fixture with the Phaser Exporter.
     * @return {object} The requested physics object data if found.
     */
-    getPhysicsData: function (key, object) {
+    getPhysicsData: function (key, object, fixtureKey) {
 
         if (typeof object === 'undefined' || object === null)
         {
@@ -594,7 +612,31 @@ Phaser.Cache.prototype = {
         {
             if (this._physics[key] && this._physics[key].data[object])
             {
-                return this._physics[key].data[object];
+                var fixtures = this._physics[key].data[object];
+
+                //try to find a fixture by it's fixture key if given
+                if (fixtures && fixtureKey)
+                {
+                    for (var fixture in fixtures)
+                    {
+                        //  This contains the fixture data of a polygon or a circle
+                        fixture = fixtures[fixture];
+
+                        //  Test the key
+                        if (fixture.fixtureKey === fixtureKey)
+                        {
+                            return fixture;
+                        }
+
+                    }
+                    
+                    //  We did not find the requested fixture
+                    console.warn('Phaser.Cache.getPhysicsData: Could not find given fixtureKey: "' + fixtureKey + ' in ' + key + '"');
+                }
+                else
+                {
+                    return fixtures;
+                }
             }
             else
             {
@@ -607,7 +649,39 @@ Phaser.Cache.prototype = {
     },
 
     /**
-    * Checks if an image key exists.
+    * Checks if a key for the given cache object type exists.
+    *
+    * @method Phaser.Cache#checkKey
+    * @param {number} type - The Cache type to check against. I.e. Phaser.Cache.CANVAS, Phaser.Cache.IMAGE, Phaser.Cache.JSON, etc.
+    * @param {string} key - Asset key of the image to check is in the Cache.
+    * @return {boolean} True if the key exists, otherwise false.
+    */
+    checkKey: function (type, key) {
+
+        if (this._cacheMap[type][key])
+        {
+            return true;
+        }
+
+        return false;
+
+    },
+
+    /**
+    * Checks if the given key exists in the Canvas Cache.
+    *
+    * @method Phaser.Cache#checkCanvasKey
+    * @param {string} key - Asset key of the image to check is in the Cache.
+    * @return {boolean} True if the key exists, otherwise false.
+    */
+    checkCanvasKey: function (key) {
+
+        return this.checkKey(Phaser.Cache.CANVAS, key);
+
+    },
+
+    /**
+    * Checks if the given key exists in the Image Cache. Note that this also includes Texture Atlases, Sprite Sheets and Retro Fonts.
     *
     * @method Phaser.Cache#checkImageKey
     * @param {string} key - Asset key of the image to check is in the Cache.
@@ -615,12 +689,124 @@ Phaser.Cache.prototype = {
     */
     checkImageKey: function (key) {
 
-        if (this._images[key])
-        {
-            return true;
-        }
+        return this.checkKey(Phaser.Cache.IMAGE, key);
 
-        return false;
+    },
+
+    /**
+    * Checks if the given key exists in the Texture Cache.
+    *
+    * @method Phaser.Cache#checkTextureKey
+    * @param {string} key - Asset key of the image to check is in the Cache.
+    * @return {boolean} True if the key exists, otherwise false.
+    */
+    checkTextureKey: function (key) {
+
+        return this.checkKey(Phaser.Cache.TEXTURE, key);
+
+    },
+
+    /**
+    * Checks if the given key exists in the Sound Cache.
+    *
+    * @method Phaser.Cache#checkSoundKey
+    * @param {string} key - Asset key of the image to check is in the Cache.
+    * @return {boolean} True if the key exists, otherwise false.
+    */
+    checkSoundKey: function (key) {
+
+        return this.checkKey(Phaser.Cache.SOUND, key);
+
+    },
+
+    /**
+    * Checks if the given key exists in the Text Cache.
+    *
+    * @method Phaser.Cache#checkTextKey
+    * @param {string} key - Asset key of the image to check is in the Cache.
+    * @return {boolean} True if the key exists, otherwise false.
+    */
+    checkTextKey: function (key) {
+
+        return this.checkKey(Phaser.Cache.TEXT, key);
+
+    },
+
+    /**
+    * Checks if the given key exists in the Physics Cache.
+    *
+    * @method Phaser.Cache#checkPhysicsKey
+    * @param {string} key - Asset key of the image to check is in the Cache.
+    * @return {boolean} True if the key exists, otherwise false.
+    */
+    checkPhysicsKey: function (key) {
+
+        return this.checkKey(Phaser.Cache.PHYSICS, key);
+
+    },
+
+    /**
+    * Checks if the given key exists in the Tilemap Cache.
+    *
+    * @method Phaser.Cache#checkTilemapKey
+    * @param {string} key - Asset key of the image to check is in the Cache.
+    * @return {boolean} True if the key exists, otherwise false.
+    */
+    checkTilemapKey: function (key) {
+
+        return this.checkKey(Phaser.Cache.TILEMAP, key);
+
+    },
+
+    /**
+    * Checks if the given key exists in the Binary Cache.
+    *
+    * @method Phaser.Cache#checkBinaryKey
+    * @param {string} key - Asset key of the image to check is in the Cache.
+    * @return {boolean} True if the key exists, otherwise false.
+    */
+    checkBinaryKey: function (key) {
+
+        return this.checkKey(Phaser.Cache.BINARY, key);
+
+    },
+
+    /**
+    * Checks if the given key exists in the BitmapData Cache.
+    *
+    * @method Phaser.Cache#checkBitmapDataKey
+    * @param {string} key - Asset key of the image to check is in the Cache.
+    * @return {boolean} True if the key exists, otherwise false.
+    */
+    checkBitmapDataKey: function (key) {
+
+        return this.checkKey(Phaser.Cache.BITMAPDATA, key);
+
+    },
+
+    /**
+    * Checks if the given key exists in the BitmapFont Cache.
+    *
+    * @method Phaser.Cache#checkBitmapFontKey
+    * @param {string} key - Asset key of the image to check is in the Cache.
+    * @return {boolean} True if the key exists, otherwise false.
+    */
+    checkBitmapFontKey: function (key) {
+
+        return this.checkKey(Phaser.Cache.BITMAPFONT, key);
+
+    },
+
+    /**
+    * Checks if the given key exists in the JSON Cache.
+    *
+    * @method Phaser.Cache#checkJSONKey
+    * @param {string} key - Asset key of the image to check is in the Cache.
+    * @return {boolean} True if the key exists, otherwise false.
+    */
+    checkJSONKey: function (key) {
+
+        return this.checkKey(Phaser.Cache.JSON, key);
 
     },
 

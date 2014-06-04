@@ -107,14 +107,19 @@ Phaser.StateManager = function (game, pendingState) {
     this.onLoadRenderCallback = null;
 
     /**
-    * @property {function} onPausedCallback - This will be called when the state is paused.
+    * @property {function} onPausedCallback - This will be called once each time the game is paused.
     */
     this.onPausedCallback = null;
 
     /**
-    * @property {function} onResumedCallback - This will be called when the state is resumed from a paused state.
+    * @property {function} onResumedCallback - This will be called once each time the game is resumed from a paused state.
     */
     this.onResumedCallback = null;
+
+    /**
+    * @property {function} onPauseUpdateCallback - This will be called every frame while the game is paused.
+    */
+    this.onPauseUpdateCallback = null;
 
     /**
     * @property {function} onShutDownCallback - This will be called when the state is shut down (i.e. swapped to another state).
@@ -206,7 +211,7 @@ Phaser.StateManager.prototype = {
     */
     remove: function (key) {
 
-        if (this.current == key)
+        if (this.current === key)
         {
             this.callbackContext = null;
 
@@ -221,7 +226,7 @@ Phaser.StateManager.prototype = {
             this.onRenderCallback = null;
             this.onPausedCallback = null;
             this.onResumedCallback = null;
-            this.onDestroyCallback = null;
+            this.onPauseUpdateCallback = null;
         }
 
         delete this.states[key];
@@ -253,6 +258,31 @@ Phaser.StateManager.prototype = {
             {
                 this._args = Array.prototype.splice.call(arguments, 3);
             }
+        }
+
+    },
+
+    /**
+    * Restarts the current State. State.shutDown will be called (if it exists) before the State is restarted.
+    *
+    * @method Phaser.StateManager#restart
+    * @param {boolean} [clearWorld=true] - Clear everything in the world? This clears the World display list fully (but not the Stage, so if you've added your own objects to the Stage they will need managing directly)
+    * @param {boolean} [clearCache=false] - Clear the Game.Cache? This purges out all loaded assets. The default is false and you must have clearWorld=true if you want to clearCache as well.
+    * @param {...*} parameter - Additional parameters that will be passed to the State.init function if it has one.
+    */
+    restart: function (clearWorld, clearCache) {
+
+        if (typeof clearWorld === "undefined") { clearWorld = true; }
+        if (typeof clearCache === "undefined") { clearCache = false; }
+
+        //  Place the state in the queue. It will be started the next time the game loop starts.
+        this._pendingState = this.current;
+        this._clearWorld = clearWorld;
+        this._clearCache = clearCache;
+
+        if (arguments.length > 2)
+        {
+            this._args = Array.prototype.splice.call(arguments, 2);
         }
 
     },
@@ -368,6 +398,7 @@ Phaser.StateManager.prototype = {
 
     /**
     * Links game properties to the State given by the key.
+    *
     * @method Phaser.StateManager#link
     * @param {string} key - State key.
     * @protected
@@ -397,6 +428,7 @@ Phaser.StateManager.prototype = {
 
     /**
     * Sets the current State. Should not be called directly (use StateManager.start)
+    *
     * @method Phaser.StateManager#setCurrentState
     * @param {string} key - State key.
     * @private
@@ -419,6 +451,7 @@ Phaser.StateManager.prototype = {
         this.onRenderCallback = this.states[key]['render'] || null;
         this.onPausedCallback = this.states[key]['paused'] || null;
         this.onResumedCallback = this.states[key]['resumed'] || null;
+        this.onPauseUpdateCallback = this.states[key]['pauseUpdate'] || null;
 
         //  Used when the state is no longer the current active state
         this.onShutDownCallback = this.states[key]['shutdown'] || this.dummy;
@@ -508,6 +541,26 @@ Phaser.StateManager.prototype = {
     },
 
     /**
+    * @method Phaser.StateManager#pauseUpdate
+    * @protected
+    */
+    pauseUpdate: function () {
+
+        if (this._created && this.onPauseUpdateCallback)
+        {
+            this.onPauseUpdateCallback.call(this.callbackContext, this.game);
+        }
+        else
+        {
+            if (this.onLoadUpdateCallback)
+            {
+                this.onLoadUpdateCallback.call(this.callbackContext, this.game);
+            }
+        }
+
+    },
+
+    /**
     * @method Phaser.StateManager#preRender
     * @protected
     */
@@ -552,7 +605,8 @@ Phaser.StateManager.prototype = {
     },
 
     /**
-    * Nuke the entire game from orbit
+    * Removes all StateManager callback references to the State object, nulls the game reference and clears the States object.
+    * You don't recover from this without rebuilding the Phaser instance again.
     * @method Phaser.StateManager#destroy
     */
     destroy: function () {
@@ -570,7 +624,7 @@ Phaser.StateManager.prototype = {
         this.onRenderCallback = null;
         this.onPausedCallback = null;
         this.onResumedCallback = null;
-        this.onDestroyCallback = null;
+        this.onPauseUpdateCallback = null;
 
         this.game = null;
         this.states = {};

@@ -41,7 +41,7 @@ Phaser.Game = function (width, height, renderer, parent, state, transparent, ant
     this.physicsConfig = physicsConfig;
 
     /**
-    * @property {HTMLElement} parent - The Games DOM parent.
+    * @property {string|HTMLElement} parent - The Games DOM parent.
     * @default
     */
     this.parent = '';
@@ -71,10 +71,9 @@ Phaser.Game = function (width, height, renderer, parent, state, transparent, ant
     this.antialias = true;
 
     /**
-    * @property {number} renderer - The Pixi Renderer
-    * @default
+    * @property {PIXI.CanvasRenderer|PIXI.WebGLRenderer} renderer - The Pixi Renderer.
     */
-    this.renderer = Phaser.AUTO;
+    this.renderer = null;
 
     /**
     * @property {number} renderType - The Renderer this game will use. Either Phaser.AUTO, Phaser.CANVAS or Phaser.WEBGL.
@@ -82,7 +81,7 @@ Phaser.Game = function (width, height, renderer, parent, state, transparent, ant
     this.renderType = Phaser.AUTO;
 
     /**
-    * @property {number} state - The StateManager.
+    * @property {Phaser.StateManager} state - The StateManager.
     */
     this.state = null;
 
@@ -115,19 +114,16 @@ Phaser.Game = function (width, height, renderer, parent, state, transparent, ant
 
     /**
     * @property {Phaser.Cache} cache - Reference to the assets cache.
-    * @default
     */
     this.cache = null;
 
     /**
     * @property {Phaser.Input} input - Reference to the input manager
-    * @default
     */
     this.input = null;
 
     /**
     * @property {Phaser.Loader} load - Reference to the assets loader.
-    * @default
     */
     this.load = null;
 
@@ -157,7 +153,7 @@ Phaser.Game = function (width, height, renderer, parent, state, transparent, ant
     this.stage = null;
 
     /**
-    * @property {Phaser.TimeManager} time - Reference to game clock.
+    * @property {Phaser.Time} time - Reference to the core game clock.
     */
     this.time = null;
 
@@ -187,7 +183,7 @@ Phaser.Game = function (width, height, renderer, parent, state, transparent, ant
     this.device = null;
 
     /**
-    * @property {Phaser.Physics.PhysicsManager} camera - A handy reference to world.camera.
+    * @property {Phaser.Camera} camera - A handy reference to world.camera.
     */
     this.camera = null;
 
@@ -219,7 +215,7 @@ Phaser.Game = function (width, height, renderer, parent, state, transparent, ant
     this.stepping = false;
 
     /**
-    * @property {boolean} stepping - An internal property used by enableStep, but also useful to query from your own game objects.
+    * @property {boolean} pendingStep - An internal property used by enableStep, but also useful to query from your own game objects.
     * @default
     * @readonly
     */
@@ -255,14 +251,12 @@ Phaser.Game = function (width, height, renderer, parent, state, transparent, ant
     /**
     * @property {boolean} _paused - Is game paused?
     * @private
-    * @default
     */
     this._paused = false;
 
     /**
     * @property {boolean} _codePaused - Was the game paused via code or a visibility change?
     * @private
-    * @default
     */
     this._codePaused = false;
 
@@ -448,9 +442,10 @@ Phaser.Game.prototype = {
             this.sound = new Phaser.SoundManager(this);
             this.physics = new Phaser.Physics(this, this.physicsConfig);
             this.particles = new Phaser.Particles(this);
-            this.plugins = new Phaser.PluginManager(this, this);
+            this.plugins = new Phaser.PluginManager(this);
             this.net = new Phaser.Net(this);
             this.debug = new Phaser.Utils.Debug(this);
+            this.scratch = new Phaser.BitmapData(this, '__root', 1024, 1024);
 
             this.time.boot();
             this.stage.boot();
@@ -486,7 +481,7 @@ Phaser.Game.prototype = {
     */
     showDebugHeader: function () {
 
-        var v = Phaser.DEV_VERSION;
+        var v = Phaser.VERSION;
         var r = 'Canvas';
         var a = 'HTML Audio';
         var c = 1;
@@ -533,7 +528,7 @@ Phaser.Game.prototype = {
 
             console.log.apply(console, args);
         }
-        else
+        else if (window['console'])
         {
             console.log('Phaser v' + v + ' - Renderer: ' + r + ' - Audio: ' + a + ' - http://phaser.io');
         }
@@ -614,11 +609,11 @@ Phaser.Game.prototype = {
             this.plugins.preUpdate();
             this.stage.preUpdate();
 
+            this.state.update();
             this.stage.update();
             this.tweens.update();
             this.sound.update();
             this.input.update();
-            this.state.update();
             this.physics.update();
             this.particles.update();
             this.plugins.update();
@@ -628,6 +623,8 @@ Phaser.Game.prototype = {
         }
         else
         {
+            this.state.pauseUpdate();
+            // this.input.update();
             this.debug.preUpdate();
         }
 
@@ -800,7 +797,7 @@ Object.defineProperty(Phaser.Game.prototype, "paused", {
             {
                 this._paused = true;
                 this._codePaused = true;
-                this.sound.mute = true;
+                this.sound.setMute();
                 this.time.gamePaused();
                 this.onPause.dispatch(this);
             }
@@ -812,7 +809,7 @@ Object.defineProperty(Phaser.Game.prototype, "paused", {
                 this._paused = false;
                 this._codePaused = false;
                 this.input.reset();
-                this.sound.mute = false;
+                this.sound.unsetMute();
                 this.time.gameResumed();
                 this.onResume.dispatch(this);
             }

@@ -5,7 +5,10 @@
 */
 
 /**
-* The Keyboard class handles looking after keyboard input for your game. It will recognise and respond to key presses and dispatch the required events.
+* The Keyboard class handles looking after keyboard input for your game.
+* It will recognise and respond to key presses and dispatch the required events.
+* Please be aware that lots of keyboards are unable to process certain combinations of keys due to hardware
+* limitations known as ghosting. Full details here: http://www.html5gamedevs.com/topic/4876-impossible-to-use-more-than-2-keyboard-input-buttons-at-the-same-time/
 *
 * @class Phaser.Keyboard
 * @constructor
@@ -192,11 +195,11 @@ Phaser.Keyboard.prototype = {
     */
     stop: function () {
 
-        this._onKeyDown = null;
-        this._onKeyUp = null;
-
         window.removeEventListener('keydown', this._onKeyDown);
         window.removeEventListener('keyup', this._onKeyUp);
+
+        this._onKeyDown = null;
+        this._onKeyUp = null;
 
     },
 
@@ -358,8 +361,11 @@ Phaser.Keyboard.prototype = {
     * Resets all Keys.
     *
     * @method Phaser.Keyboard#reset
+    * @param {boolean} [hard=true] - A soft reset won't reset any events or callbacks that are bound to the Keys. A hard reset will.
     */
-    reset: function () {
+    reset: function (hard) {
+
+        if (typeof hard === 'undefined') { hard = true; }
 
         this.event = null;
 
@@ -369,7 +375,7 @@ Phaser.Keyboard.prototype = {
         {
             if (this._keys[i])
             {
-                this._keys[i].reset();
+                this._keys[i].reset(hard);
             }
         }
 
@@ -380,10 +386,12 @@ Phaser.Keyboard.prototype = {
     *
     * @method Phaser.Keyboard#justPressed
     * @param {number} keycode - The keycode of the key to remove, i.e. Phaser.Keyboard.UP or Phaser.Keyboard.SPACEBAR
-    * @param {number} [duration=250] - The duration below which the key is considered as being just pressed.
+    * @param {number} [duration=50] - The duration below which the key is considered as being just pressed.
     * @return {boolean} True if the key is just pressed otherwise false.
     */
     justPressed: function (keycode, duration) {
+
+        if (typeof duration === 'undefined') { duration = 50; }
 
         if (this._keys[keycode])
         {
@@ -401,10 +409,12 @@ Phaser.Keyboard.prototype = {
     *
     * @method Phaser.Keyboard#justReleased
     * @param {number} keycode - The keycode of the key to remove, i.e. Phaser.Keyboard.UP or Phaser.Keyboard.SPACEBAR
-    * @param {number} [duration=250] - The duration below which the key is considered as being just released.
+    * @param {number} [duration=50] - The duration below which the key is considered as being just released.
     * @return {boolean} True if the key is just released otherwise false.
     */
     justReleased: function (keycode, duration) {
+
+        if (typeof duration === 'undefined') { duration = 50; }
 
         if (this._keys[keycode])
         {

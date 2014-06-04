@@ -287,7 +287,7 @@ Phaser.Physics.Arcade.Body = function (sprite) {
     this.tilePadding = new Phaser.Point();
 
     /**
-    * @property {number} phaser - Is this Body in a preUpdate or postUpdate state?
+    * @property {number} phaser - Is this Body in a preUpdate (1) or postUpdate (2) state?
     */
     this.phase = 0;
 
@@ -328,7 +328,7 @@ Phaser.Physics.Arcade.Body.prototype = {
     /**
     * Internal method.
     *
-    * @method Phaser.Physics.Arcade#updateBounds
+    * @method Phaser.Physics.Arcade.Body#updateBounds
     * @protected
     */
     updateBounds: function () {
@@ -354,7 +354,7 @@ Phaser.Physics.Arcade.Body.prototype = {
     /**
     * Internal method.
     *
-    * @method Phaser.Physics.Arcade#preUpdate
+    * @method Phaser.Physics.Arcade.Body#preUpdate
     * @protected
     */
     preUpdate: function () {
@@ -429,10 +429,16 @@ Phaser.Physics.Arcade.Body.prototype = {
     /**
     * Internal method.
     *
-    * @method Phaser.Physics.Arcade#postUpdate
+    * @method Phaser.Physics.Arcade.Body#postUpdate
     * @protected
     */
     postUpdate: function () {
+
+        //  Only allow postUpdate to be called once per frame
+        if (this.phase === 2)
+        {
+            return;
+        }
 
         this.phase = 2;
 
@@ -502,7 +508,7 @@ Phaser.Physics.Arcade.Body.prototype = {
     /**
     * Removes this bodies reference to its parent sprite, freeing it up for gc.
     *
-    * @method Phaser.Physics.Arcade#destroy
+    * @method Phaser.Physics.Arcade.Body#destroy
     */
     destroy: function () {
 
@@ -513,7 +519,7 @@ Phaser.Physics.Arcade.Body.prototype = {
     /**
     * Internal method.
     *
-    * @method Phaser.Physics.Arcade#checkWorldBounds
+    * @method Phaser.Physics.Arcade.Body#checkWorldBounds
     * @protected
     */
     checkWorldBounds: function () {
@@ -551,7 +557,7 @@ Phaser.Physics.Arcade.Body.prototype = {
     * So it could be smaller or larger than the parent Sprite. You can also control the x and y offset, which
     * is the position of the Body relative to the top-left of the Sprite.
     *
-    * @method Phaser.Physics.Arcade#setSize
+    * @method Phaser.Physics.Arcade.Body#setSize
     * @param {number} width - The width of the Body.
     * @param {number} height - The height of the Body.
     * @param {number} offsetX - The X offset of the Body from the Sprite position.
@@ -577,9 +583,9 @@ Phaser.Physics.Arcade.Body.prototype = {
     /**
     * Resets all Body values (velocity, acceleration, rotation, etc)
     *
-    * @method Phaser.Physics.Arcade#reset
+    * @method Phaser.Physics.Arcade.Body#reset
     * @param {number} x - The new x position of the Body.
-    * @param {number} y - The new x position of the Body.
+    * @param {number} y - The new y position of the Body.
     */
     reset: function (x, y) {
 
@@ -602,6 +608,20 @@ Phaser.Physics.Arcade.Body.prototype = {
         this._sy = this.sprite.scale.y;
         
         this.center.setTo(this.position.x + this.halfWidth, this.position.y + this.halfHeight);
+
+    },
+
+    /**
+    * Tests if a world point lies within this Body.
+    *
+    * @method Phaser.Physics.Arcade.Body#hitTest
+    * @param {number} x - The world x coordinate to test.
+    * @param {number} y - The world y coordinate to test.
+    * @return {boolean} True if the given coordinates are inside this Body, otherwise false.
+    */
+    hitTest: function (x, y) {
+
+        return Phaser.Rectangle.contains(this, x, y);
 
     },
 

@@ -378,7 +378,7 @@ Phaser.Physics.Arcade.prototype = {
     * @method Phaser.Physics.Arcade#collide
     * @param {Phaser.Sprite|Phaser.Group|Phaser.Particles.Emitter|Phaser.Tilemap} object1 - The first object to check. Can be an instance of Phaser.Sprite, Phaser.Group, Phaser.Particles.Emitter, or Phaser.Tilemap.
     * @param {Phaser.Sprite|Phaser.Group|Phaser.Particles.Emitter|Phaser.Tilemap|array} object2 - The second object or array of objects to check. Can be Phaser.Sprite, Phaser.Group, Phaser.Particles.Emitter or Phaser.Tilemap.
-    * @param {function} [collideCallback=null] - An optional callback function that is called if the objects collide. The two objects will be passed to this function in the same order in which you specified them.
+    * @param {function} [collideCallback=null] - An optional callback function that is called if the objects collide. The two objects will be passed to this function in the same order in which you specified them, unless you are colliding Group vs. Sprite, in which case Sprite will always be the first parameter.
     * @param {function} [processCallback=null] - A callback function that lets you perform additional checks against the two objects if they overlap. If this is set then collision will only happen if processCallback returns true. The two objects will be passed to this function in the same order in which you specified them.
     * @param {object} [callbackContext] - The context in which to run the callbacks.
     * @return {boolean} True if a collision occured otherwise false.
@@ -543,7 +543,7 @@ Phaser.Physics.Arcade.prototype = {
     */
     collideSpriteVsGroup: function (sprite, group, collideCallback, processCallback, callbackContext, overlapOnly) {
 
-        if (group.length === 0)
+        if (group.length === 0 || !sprite.body)
         {
             return;
         }
@@ -649,6 +649,11 @@ Phaser.Physics.Arcade.prototype = {
     * @param {boolean} overlapOnly - Just run an overlap or a full collision.
     */
     collideSpriteVsTilemapLayer: function (sprite, tilemapLayer, collideCallback, processCallback, callbackContext) {
+
+        if (!sprite.body)
+        {
+            return;
+        }
 
         this._mapData = tilemapLayer.getTiles(
             sprite.body.position.x - sprite.body.tilePadding.x,
@@ -1310,6 +1315,53 @@ Phaser.Physics.Arcade.prototype = {
         {
             body.velocity.y = -body.velocity.y * body.bounce.y;
         }
+
+    },
+
+    /**
+    * Given a Group and a Pointer this will check to see which Group children overlap with the Pointer coordinates.
+    * Each child will be sent to the given callback for further processing.
+    * Note that the children are not checked for depth order, but simply if they overlap the Pointer or not.
+    *
+    * @method Phaser.Physics.Arcade#getObjectsUnderPointer
+    * @param {Phaser.Pointer} pointer - The Pointer to check.
+    * @param {Phaser.Group} group - The Group to check.
+    * @param {function} [callback] - A callback function that is called if the object overlaps with the Pointer. The callback will be sent two parameters: the Pointer and the Object that overlapped with it.
+    * @param {object} [callbackContext] - The context in which to run the callback.
+    * @return {array} An array of the Sprites from the Group that overlapped the Pointer coordinates.
+    */
+    getObjectsUnderPointer: function (pointer, group, callback, callbackContext) {
+
+        if (group.length === 0 || !pointer.exists)
+        {
+            return;
+        }
+
+        this.quadTree.clear();
+
+        this.quadTree.reset(this.game.world.bounds.x, this.game.world.bounds.y, this.game.world.bounds.width, this.game.world.bounds.height, this.maxObjects, this.maxLevels);
+
+        this.quadTree.populate(group);
+
+        var rect = new Phaser.Rectangle(pointer.x, pointer.y, 1, 1);
+        var output = [];
+
+        this._potentials = this.quadTree.retrieve(rect);
+
+        for (var i = 0, len = this._potentials.length; i < len; i++)
+        {
+            if (this._potentials[i].hitTest(pointer.x, pointer.y))
+            {
+                if (callback)
+                {
+                    callback.call(callbackContext, pointer, this._potentials[i].sprite);
+                }
+
+                output.push(this._potentials[i].sprite);
+            }
+        }
+
+        return output;
 
     },
 

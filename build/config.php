@@ -80,6 +80,7 @@
     <script src="$path/src/core/Camera.js"></script>
     <script src="$path/src/core/State.js"></script>
     <script src="$path/src/core/StateManager.js"></script>
+    <script src="$path/src/core/ArrayList.js"></script>
     <script src="$path/src/core/LinkedList.js"></script>
     <script src="$path/src/core/Signal.js"></script>
     <script src="$path/src/core/SignalBinding.js"></script>
@@ -118,6 +119,7 @@
     <script src="$path/src/gameobjects/RenderTexture.js"></script>
     <script src="$path/src/gameobjects/SpriteBatch.js"></script>
     <script src="$path/src/gameobjects/RetroFont.js"></script>
+    <script src="$path/src/gameobjects/Particle.js"></script>
 
     <script src="$path/src/system/Canvas.js"></script>
     <script src="$path/src/system/Device.js"></script>
@@ -181,6 +183,7 @@ EOL;
         echo <<<EOL
 
     <script src="$path/src/physics/p2/World.js"></script>
+    <script src="$path/src/physics/p2/FixtureList.js"></script>
     <script src="$path/src/physics/p2/PointProxy.js"></script>
     <script src="$path/src/physics/p2/InversePointProxy.js"></script>
     <script src="$path/src/physics/p2/Body.js"></script>

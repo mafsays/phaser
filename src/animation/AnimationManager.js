@@ -31,6 +31,12 @@ Phaser.AnimationManager = function (sprite) {
     this.currentFrame = null;
 
     /**
+    * @property {Phaser.Animation} currentAnim - The currently displayed animation, if any.
+    * @default
+    */
+    this.currentAnim = null;
+
+    /**
     * @property {boolean} updateIfVisible - Should the animation data continue to update even if the Sprite.visible is set to false.
     * @default
     */
@@ -95,7 +101,7 @@ Phaser.AnimationManager.prototype = {
     */
     add: function (name, frames, frameRate, loop, useNumericIndex) {
 
-        if (this._frameData == null)
+        if (this._frameData === null)
         {
             console.warn('No FrameData available for Phaser.Animation ' + name);
             return;
@@ -120,7 +126,7 @@ Phaser.AnimationManager.prototype = {
         }
 
         //  Create the signals the AnimationManager will emit
-        if (this.sprite.events.onAnimationStart == null)
+        if (this.sprite.events.onAnimationStart === null)
         {
             this.sprite.events.onAnimationStart = new Phaser.Signal();
             this.sprite.events.onAnimationComplete = new Phaser.Signal();
@@ -195,7 +201,7 @@ Phaser.AnimationManager.prototype = {
 
         if (this._anims[name])
         {
-            if (this.currentAnim == this._anims[name])
+            if (this.currentAnim === this._anims[name])
             {
                 if (this.currentAnim.isPlaying === false)
                 {
@@ -205,6 +211,11 @@ Phaser.AnimationManager.prototype = {
             }
             else
             {
+                if (this.currentAnim && this.currentAnim.isPlaying)
+                {
+                    this.currentAnim.stop();
+                }
+
                 this.currentAnim = this._anims[name];
                 this.currentAnim.paused = false;
                 return this.currentAnim.play(frameRate, loop, killOnComplete);
@@ -306,11 +317,22 @@ Phaser.AnimationManager.prototype = {
     },
 
     /**
-    * Destroys all references this AnimationManager contains. Sets the _anims to a new object and nulls the current animation.
+    * Destroys all references this AnimationManager contains.
+    * Iterates through the list of animations stored in this manager and calls destroy on each of them.
     *
     * @method Phaser.AnimationManager#destroy
     */
     destroy: function () {
+
+        var anim = null;
+
+        for (var anim in this._anims)
+        {
+            if (this._anims.hasOwnProperty(anim))
+            {
+                this._anims[anim].destroy();
+            }
+        }
 
         this._anims = {};
         this._frameData = null;

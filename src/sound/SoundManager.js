@@ -8,6 +8,8 @@
 * Sound Manager constructor.
 * The Sound Manager is responsible for playing back audio via either the Legacy HTML Audio tag or via Web Audio if the browser supports it.
 * Note: On Firefox 25+ on Linux if you have media.gstreamer disabled in about:config then it cannot play back mp3 or m4a files.
+* The audio file type and the encoding of those files are extremely important. Not all browsers can play all audio formats.
+* There is a good guide to what's supported here: http://hpr.dogphilosophy.net/test/
 *
 * @class Phaser.SoundManager
 * @classdesc Phaser Sound Manager.
@@ -57,7 +59,6 @@ Phaser.SoundManager = function (game) {
     /**
     * @property {array} _sounds - An array containing all the sounds
     * @private
-    * @default The empty array.
     */
     this._sounds = [];
 
@@ -155,21 +156,30 @@ Phaser.SoundManager.prototype = {
 
         if (!!window['AudioContext'])
         {
-            this.context = new window['AudioContext']();
+            try {
+                this.context = new window['AudioContext']();
+            } catch (error) {
+                this.context = null;
+                this.usingWebAudio = false;
+                this.noAudio = true;
+            }
         }
         else if (!!window['webkitAudioContext'])
         {
-            this.context = new window['webkitAudioContext']();
+            try {
+                this.context = new window['webkitAudioContext']();
+            } catch (error) {
+                this.context = null;
+                this.usingWebAudio = false;
+                this.noAudio = true;
+            }
         }
-        else if (!!window['Audio'])
+
+        if (!!window['Audio'] && this.context === null)
         {
             this.usingWebAudio = false;
             this.usingAudioTag = true;
-        }
-        else
-        {
-            this.usingWebAudio = false;
-            this.noAudio = true;
+            this.noAudio = false;
         }
 
         if (this.context !== null)
@@ -225,6 +235,7 @@ Phaser.SoundManager.prototype = {
 
     /**
     * Stops all the sounds in the game.
+    *
     * @method Phaser.SoundManager#stopAll
     */
     stopAll: function () {
@@ -241,6 +252,7 @@ Phaser.SoundManager.prototype = {
 
     /**
     * Pauses all the sounds in the game.
+    *
     * @method Phaser.SoundManager#pauseAll
     */
     pauseAll: function () {
@@ -256,7 +268,8 @@ Phaser.SoundManager.prototype = {
     },
 
     /**
-    * resumes every sound in the game.
+    * Resumes every sound in the game.
+    *
     * @method Phaser.SoundManager#resumeAll
     */
     resumeAll: function () {
@@ -273,6 +286,7 @@ Phaser.SoundManager.prototype = {
 
     /**
     * Decode a sound by its assets key.
+    *
     * @method Phaser.SoundManager#decode
     * @param {string} key - Assets key of the sound to be decoded.
     * @param {Phaser.Sound} [sound] - Its buffer will be set to decoded data.
@@ -305,6 +319,7 @@ Phaser.SoundManager.prototype = {
 
     /**
     * Updates every sound in the game.
+    *
     * @method Phaser.SoundManager#update
     */
     update: function () {
@@ -332,6 +347,7 @@ Phaser.SoundManager.prototype = {
 
     /**
     * Adds a new Sound into the SoundManager.
+    *
     * @method Phaser.SoundManager#add
     * @param {string} key - Asset key for the sound.
     * @param {number} [volume=1] - Default value for the volume.
@@ -354,7 +370,60 @@ Phaser.SoundManager.prototype = {
     },
 
     /**
+    * Removes a Sound from the SoundManager. The removed Sound is destroyed before removal.
+    *
+    * @method Phaser.SoundManager#remove
+    * @param {Phaser.Sound} sound - The sound object to remove.
+    * @return {boolean} True if the sound was removed successfully, otherwise false.
+    */
+    remove: function (sound) {
+
+        var i = this._sounds.length;
+
+        while (i--)
+        {
+            if (this._sounds[i] === sound)
+            {
+                this._sounds[i].destroy(false);
+                this._sounds.splice(i, 1);
+                return true;
+            }
+        }
+
+        return false;
+
+    },
+
+    /**
+    * Removes all Sounds from the SoundManager that have an asset key matching the given value.
+    * The removed Sounds are destroyed before removal.
+    *
+    * @method Phaser.SoundManager#removeByKey
+    * @param {string} key - The key to match when removing sound objects.
+    * @return {number} The number of matching sound objects that were removed.
+    */
+    removeByKey: function (key) {
+
+        var i = this._sounds.length;
+        var removed = 0;
+
+        while (i--)
+        {
+            if (this._sounds[i].key === key)
+            {
+                this._sounds[i].destroy(false);
+                this._sounds.splice(i, 1);
+                removed++;
+            }
+        }
+
+        return removed;
+
+    },
+
+    /**
     * Adds a new Sound into the SoundManager and starts it playing.
+    *
     * @method Phaser.SoundManager#play
     * @param {string} key - Asset key for the sound.
     * @param {number} [volume=1] - Default value for the volume.
@@ -466,7 +535,7 @@ Object.defineProperty(Phaser.SoundManager.prototype, "mute", {
         }
         else
         {
-            if (this._muted === false)
+            if (!this._muted)
             {
                 return;
             }
